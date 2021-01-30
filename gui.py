@@ -178,6 +178,7 @@ class gui:
         This function is called to update the overview tab.
         """
         self.all_label.destroy()
+        self.old_label.destroy()
         self.value_label.destroy()
         self.type_label.destroy()
         self.mint_label.destroy()
@@ -365,7 +366,7 @@ class gui:
         #condition dropdown menu
         self.condition = tk.StringVar()
         self.condition_chosen = ttk.Combobox(entry, width=4, textvariable=self.condition, state='readonly')
-        self.condition_chosen['values'] = ('PR', 'FA', 'AG', 'G', 'VG', 'F', 'VF', 'XF', 'AU', 'MS')
+        self.condition_chosen['values'] = ('PR', 'FA', 'AG', 'G', 'VG', 'F', 'VF', 'XF', 'AU', 'U', 'MS', 'PR')
         self.condition_chosen.grid(column=3, row=1, padx=2, pady=2)
 
         #value entry
@@ -437,7 +438,7 @@ class gui:
         #condition dropdown menu
         self.search_condition = tk.StringVar()
         self.condition_search = ttk.Combobox(search, width=4, textvariable=self.search_condition, state='readonly')
-        self.condition_search['values'] = ('', 'PR', 'FA', 'AG', 'G', 'VG', 'F', 'VF', 'XF', 'AU', 'MS')
+        self.condition_search['values'] = ('', 'PR', 'FA', 'AG', 'G', 'VG', 'F', 'VF', 'XF', 'AU', 'U', 'MS', 'PR')
         self.condition_search.grid(column=3, row=1, padx=2, pady=2)
 
         #search button
