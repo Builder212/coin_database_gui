@@ -1,2 +1,6 @@
 # coin_database_gui
-A gui designed to work with a database to keep track of coins.
+A simple gui designed to interact with a database. The goal of the database
+is to make keeping track of collected coins simple.
+
+# Here is a preview of what the GUI looks like.
+![Login tab][gui_previews/login_tab.png]
