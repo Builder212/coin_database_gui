@@ -3,6 +3,7 @@ from tkinter import ttk, scrolledtext, Menu, Spinbox
 from tkinter import messagebox as msg
 from time import sleep
 from database import database as db
+from errors import *
 
 class gui:
     def __init__(self):
@@ -10,9 +11,9 @@ class gui:
         Initiates the gui.
         """
         self.win = tk.Tk()
-        self.win.title("Coin Database")
+        self.win.title('Coin Database')
 
-        self.db = db()
+        self.db = db('Coin')
 
         self.create_widgets()
 
@@ -20,20 +21,33 @@ class gui:
         """
         This safely quits the program.
         """
-        self.win.quit()
-        self.win.destroy()
         try:
             self.db.quit()
-        except:
-            pass
-        exit()
+        except QuitError:
+            msg.showerror('Database Exit', 'The database has failed to properly terminate.')
+        except BackupError:
+            msg.showwarning('Backup Error', 'Your database has failed to backup. Please proceed with caution.')
+        finally:
+            self.win.quit()
+            self.win.destroy()
+            exit()
 
     def login(self):
         """
         This function is called on the login page to login to the database.
         """
-        login_attempt = self.db.login(self.username.get(), self.password.get(), self.ip.get())
-        if login_attempt == True:
+        try:
+            self.db.login(self.username.get(), self.password.get(), self.ip.get())
+        except LoginError:
+            msg.showerror('Incorrect Login', 'Your username, password, and or host ID is incorrect. Please Try again with the correct login.')
+        except DatabaseError:
+            msg.showerror('Database Error', 'Your database has failed to initalize.')
+        else:
+            try:
+                self.db.login(self.username.get(), self.password.get(), self.ip.get())
+            except BackupError:
+                msg.showwarning('Backup Error', 'Your database has failed to backup. Please proceed with caution.')
+
             self.tab_control.tab(1, state="normal")
             self.tab_control.tab(2, state="normal")
             self.tab_control.tab(3, state="normal")
@@ -41,20 +55,21 @@ class gui:
             self.tab_control.tab(0, state="disabled")
             self.password_entry.delete(0, 'end')
 
-            result = self.db.return_db()
-            output = "Your results:\n"
-            for id, type, year, mint, description, condition, value in result:
-                output += '{} - {} - {} - {} - {} - {} - {}\n'.format(id, type, year, mint, description, condition, value)
-            output += "\n"
+            try:
+                result = self.db.return_db()
+            except SearchError:
+                msg.showerror('Search Error', 'Returning the entire database has failed.')
+            else:
+                output = "Your results:\n"
+                for id, type, year, mint, description, condition, value in result:
+                    output += '{} - {} - {} - {} - {} - {} - {}\n'.format(id, type, year, mint, description, condition, value)
+                output += "\n"
 
-            self.all.configure(state ='normal')
-            self.all.insert(tk.INSERT, output)
-            self.all.configure(state ='disabled')
+                self.all.configure(state ='normal')
+                self.all.insert(tk.INSERT, output)
+                self.all.configure(state ='disabled')
 
             self.over_tab()
-
-        else:
-            msg.showwarning('Incorrect Login', 'Your username, password, and or host ID is incorrect. Please Try again with the correct login.')
 
     def logout(self):
         """
@@ -67,7 +82,13 @@ class gui:
             self.tab_control.tab(3, state="disabled")
             self.tab_control.tab(4, state="disabled")
             self.password_entry.delete(0, 'end')
-            self.db.quit()
+
+            try:
+                self.db.quit()
+            except QuitError:
+                msg.showerror('Database Exit', 'The database has failed to properly terminate.')
+            except BackupError:
+                msg.showwarning('Backup Error', 'Your database has failed to backup. Please proceed with caution.')
         except:
             msg.showwarning('Logout Error', 'You are not logged in. You have no need to logout.')
 
@@ -77,7 +98,7 @@ class gui:
         """
         try:
             self.db.backup()
-        except:
+        except BackupFailed:
             msg.showwarning('Backup Error', 'Your backup attempt has failed.')
 
     def recover_db(self):
@@ -86,7 +107,7 @@ class gui:
         """
         try:
             self.db.recover_from_backup()
-        except:
+        except RecoverError:
             msg.showwarning('Recovery Error', 'Your recovery attempt has failed.')
 
     def insert_coin(self):
@@ -95,18 +116,21 @@ class gui:
         """
         if self.type.get() == "" or self.condition.get() == "" or self.description.get() == "":
             msg.showwarning('Blank Values', 'You have failed to either give this entry a type, condition, or description.')
-
         else:
-            self.db.add(self.type.get(), self.year.get(), self.mint.get(), self.description.get(), self.condition.get(), self.value.get())
-            self.scr.configure(state ='normal')
-            self.scr.insert(tk.INSERT, "Coin added.\n")
-            self.scr.configure(state ='disabled')
-            self.type_chosen.set('')
-            self.mint_chosen.set('')
-            self.condition_chosen.set('')
-            self.year_entry.delete(0, 'end')
-            self.description_entry.delete(0, 'end')
-            self.value_entry.delete(0, 'end')
+            try:
+                self.db.add(self.type.get(), self.year.get(), self.mint.get(), self.description.get(), self.condition.get(), self.value.get())
+            except AddError:
+                msg.showerror('Insert Error', 'An error has occured in an attempt to insert new information into your database.')
+            else:
+                self.scr.configure(state ='normal')
+                self.scr.insert(tk.INSERT, "Coin added.\n")
+                self.scr.configure(state ='disabled')
+                self.type_chosen.set('')
+                self.mint_chosen.set('')
+                self.condition_chosen.set('')
+                self.year_entry.delete(0, 'end')
+                self.description_entry.delete(0, 'end')
+                self.value_entry.delete(0, 'end')
 
     def remove_coin(self):
         """
@@ -143,16 +167,20 @@ class gui:
         else:
             sort = ""
 
-        result = self.db.search(self.search_type.get(), self.search_year.get(), self.search_mint.get(), self.search_condition.get(), self.description_search.get(), sort)
-        output = "Your results:\n"
+        try:
+            result = self.db.search(self.search_type.get(), self.search_year.get(), self.search_mint.get(), self.search_condition.get(), self.description_search.get(), sort)
+        except SearchError:
+            msg.showerror('Search Error', 'An error has occured in an attempt to search for information in your database.')
+        else:
+            output = "Your results:\n"
 
-        for id, type, year, mint, description, condition, value in result:
-            output += '{} - {} - {} - {} - {} - {} - {}\n'.format(id, type, year, mint, description, condition, value)
-        output += "\n"
+            for id, type, year, mint, description, condition, value in result:
+                output += '{} - {} - {} - {} - {} - {} - {}\n'.format(id, type, year, mint, description, condition, value)
+            output += "\n"
 
-        self.sort_scr.configure(state ='normal')
-        self.sort_scr.insert(tk.INSERT, output)
-        self.sort_scr.configure(state ='disabled')
+            self.sort_scr.configure(state ='normal')
+            self.sort_scr.insert(tk.INSERT, output)
+            self.sort_scr.configure(state ='disabled')
 
     def show_db(self):
         """
@@ -162,7 +190,10 @@ class gui:
         self.all.delete('0.0', tk.END)
         self.all.configure(state ='disabled')
 
-        result = self.db.return_db()
+        try:
+            result = self.db.return_db()
+        except SearchError:
+            msg.showerror('Search Error', 'An error has occured in an attempt to search for information in your database.')
         output = "Your results:\n"
 
         for id, type, year, mint, description, condition, value in result:
